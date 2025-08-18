@@ -816,3 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+window.startTest = startTest;
+window.nextQuestion = nextQuestion;
+window.finishTest = finishTest;
+window.enableNext = enableNext;
