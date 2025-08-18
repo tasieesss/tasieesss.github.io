@@ -686,8 +686,9 @@ function calculateResults() {
         const answerValue = answers[index] || 0;
         totalScore += answerValue;
 
-        const criterionKey = question.criterion; // строка!
-        if (!scoresByCriterion[criterionKey]) {
+        const criterionKey = question.criterion;
+        // Защитимся: если критерия нет в scoresByCriterion — создаём его
+        if (!scoresByCriterion.hasOwnProperty(criterionKey)) {
             scoresByCriterion[criterionKey] = { score: 0, maxScore: 0 };
         }
         scoresByCriterion[criterionKey].score += answerValue;
@@ -700,7 +701,7 @@ function displayResults() {
     const tbody = document.getElementById('results-tbody');
     tbody.innerHTML = '';
 
-    testData.criteria.forEach((criterionName) => {
+    Object.keys(scoresByCriterion).forEach((criterionName) => {
         const criterionScore = scoresByCriterion[criterionName].score;
         const maxScore = scoresByCriterion[criterionName].maxScore;
         const level = getLevel(criterionScore, maxScore);
