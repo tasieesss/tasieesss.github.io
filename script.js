@@ -677,18 +677,14 @@ function finishTest() {
 // Функция для расчета результатов
 function calculateResults() {
     totalScore = 0;
-    // Сбрасываем баллы по критериям
-    for (let key in scoresByCriterion) {
-        scoresByCriterion[key] = { score: 0, maxScore: 0 };
-    }
+    scoresByCriterion = {}; // сбрасываем!
 
     testData.questions.forEach((question, index) => {
         const answerValue = answers[index] || 0;
         totalScore += answerValue;
 
         const criterionKey = question.criterion;
-        // Защитимся: если критерия нет в scoresByCriterion — создаём его
-        if (!scoresByCriterion.hasOwnProperty(criterionKey)) {
+        if (!scoresByCriterion[criterionKey]) {
             scoresByCriterion[criterionKey] = { score: 0, maxScore: 0 };
         }
         scoresByCriterion[criterionKey].score += answerValue;
@@ -696,7 +692,6 @@ function calculateResults() {
     });
 }
 
-// Функция для отображения результатов
 function displayResults() {
     const tbody = document.getElementById('results-tbody');
     tbody.innerHTML = '';
@@ -714,6 +709,36 @@ function displayResults() {
             <td><span class="level-${level}">${getLevelText(level)}</span></td>
         `;
         tbody.appendChild(row);
+    });
+}
+
+function generateRecommendations() {
+    const recommendationsContainer = document.getElementById('recommendations-container');
+    recommendationsContainer.innerHTML = '';
+    
+    Object.keys(scoresByCriterion).forEach((criterionName) => {
+        const criterionScore = scoresByCriterion[criterionName].score;
+        const maxScore = scoresByCriterion[criterionName].maxScore;
+        const level = getLevel(criterionScore, maxScore);
+
+        let recommendationText = '';
+        if (
+            testData.recommendations &&
+            testData.recommendations[criterionName] &&
+            testData.recommendations[criterionName][level]
+        ) {
+            recommendationText = testData.recommendations[criterionName][level];
+        } else {
+            recommendationText = 'Рекомендація для цього рівня не знайдена.';
+        }
+
+        const recommendationItem = document.createElement('div');
+        recommendationItem.classList.add('recommendation-item');
+        recommendationItem.innerHTML = `
+            <div class="recommendation-title">Критерій: ${criterionName}</div>
+            <p>${recommendationText}</p>
+        `;
+        recommendationsContainer.appendChild(recommendationItem);
     });
 }
 
@@ -735,38 +760,6 @@ function getLevelText(level) {
     if (level === 'high') return 'Високий';
     if (level === 'medium') return 'Середній';
     return 'Низький';
-}
-
-// Функция для генерации рекомендаций
-function generateRecommendations() {
-    const recommendationsContainer = document.getElementById('recommendations-container');
-    recommendationsContainer.innerHTML = '';
-    
-    testData.criteria.forEach((criterionName) => {
-        const criterionScore = scoresByCriterion[criterionName].score;
-        const maxScore = scoresByCriterion[criterionName].maxScore;
-        const level = getLevel(criterionScore, maxScore);
-
-        // Получаем текст рекомендации по названию критерия и уровню!
-        let recommendationText = '';
-        if (
-            testData.recommendations &&
-            testData.recommendations[criterionName] &&
-            testData.recommendations[criterionName][level]
-        ) {
-            recommendationText = testData.recommendations[criterionName][level];
-        } else {
-            recommendationText = 'Рекомендація для цього рівня не знайдена.';
-        }
-
-        const recommendationItem = document.createElement('div');
-        recommendationItem.classList.add('recommendation-item');
-        recommendationItem.innerHTML = `
-            <div class="recommendation-title">Критерій: ${criterionName}</div>
-            <p>${recommendationText}</p>
-        `;
-        recommendationsContainer.appendChild(recommendationItem);
-    });
 }
 
 // Создание плавающих частиц для эффекта
