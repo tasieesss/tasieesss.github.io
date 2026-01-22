@@ -405,3 +405,16 @@ input:focus{
   .results-table th, .results-table td{ padding: 10px 12px; font-size: 12px; }
   .btn{ padding: 14px 16px; }
 }
+
+
+/* results in one column */
+.results-stack{
+  display:block;
+  margin-bottom:18px;
+}
+.results-stack .card{
+  width:100%;
+}
+.results-grid{
+  display:block !important;
+}

@@ -7,7 +7,7 @@
   // ---------- Test mode (for quick QA) ----------
   // true  -> only first TEST_LIMIT questions are used (you don't delete the rest)
   // false -> use all questions
-  const TEST_MODE = true;
+  const TEST_MODE = false;
   const TEST_LIMIT = 10;
 
   function getQuestions() {
