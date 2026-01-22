@@ -280,12 +280,7 @@ input:focus{
   margin-bottom: 22px;
 }
 
-.results-grid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 18px;
-}
+.results-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:18px;}
 
 .card{
   padding: 18px;
@@ -408,10 +403,7 @@ input:focus{
 
 
 /* results in one column */
-.results-stack{
-  display:block;
-  margin-bottom:18px;
-}
+.results-stack{display:flex;flex-direction:column;gap:16px;margin-bottom:18px;}
 .results-stack .card{
   width:100%;
 }
@@ -420,23 +412,9 @@ input:focus{
 }
 
 
-/* Test mode checkbox */
-.checkbox{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  cursor:pointer;
-  user-select:none;
-  font-weight:500;
-  color:#374151;
-}
-.checkbox input{
-  transform: scale(1.2);
-  accent-color:#6366f1;
-}
-.hint{
-  margin-top:8px;
-  font-size:13px;
-  color:#6b7280;
-  line-height:1.4;
-}
+/* recommendation steps formatting */
+.rec-steps{margin-top:10px}
+.rec-steps ol{margin:8px 0 0 18px}
+.rec-q{font-weight:700;margin:6px 0 2px 0}
+.rec-id{display:inline-block;margin-right:8px;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,.12);color:#4f46e5;font-weight:700}
+.rec-t{color:#374151}
