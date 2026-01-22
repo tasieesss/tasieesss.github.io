@@ -41,7 +41,16 @@
           <label for="email">Email для отримання результатів</label>
           <input type="email" id="email" placeholder="your@email.com" autocomplete="email" />
         </div>
-      </div>
+      
+
+            <div class="form-group testmode-row">
+                <label class="checkbox">
+                    <input type="checkbox" id="test-mode">
+                    <span>Тестовий режим (10 питань для перевірки)</span>
+                </label>
+                <div class="hint">У тестовому режимі показуються лише перші 10 питань, усі 100 залишаються в файлі.</div>
+            </div>
+</div>
 
       <button class="btn" id="start-btn" type="button">Почати тест</button>
     </section>
@@ -103,8 +112,6 @@
         <tbody id="results-tbody"></tbody>
       </table>
 
-            </div>
-
       <div class="recommendations">
         <h3>Рекомендації щодо удосконалення</h3>
         <p class="hint">Сформовано на основі ваших відповідей (обраних варіантів) та рівня по критерію.</p>
@@ -118,6 +125,7 @@
     </section>
   </main>
 
+  <!-- Optional: Chart.js for radar chart -->
 <!-- Data + logic -->
   <script src="testData.js"></script>
   <script src="script.js"></script>
