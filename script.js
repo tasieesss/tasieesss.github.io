@@ -347,3 +347,50 @@
     createParticles();
   });
 })();
+// ===== EmailJS integration =====
+function sendResultsByEmail(results) {
+  const { totalScore, totalMax, byCriterion } = results;
+
+  let criteriaTable = `
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse">
+      <tr>
+        <th>Критерій</th><th>Макс</th><th>Бал</th><th>%</th><th>Рівень</th>
+      </tr>`;
+
+  let recommendations = "";
+
+  for (const [crit, data] of Object.entries(byCriterion)) {
+    const pct = Math.round((data.score / data.maxScore) * 100);
+    const level = pct >= 70 ? "Високий" : pct >= 40 ? "Середній" : "Низький";
+
+    criteriaTable += `
+      <tr>
+        <td>${crit}</td>
+        <td>${data.maxScore}</td>
+        <td>${data.score}</td>
+        <td>${pct}%</td>
+        <td>${level}</td>
+      </tr>`;
+
+    recommendations += `<p><strong>${crit}:</strong> ${level}</p>`;
+  }
+
+  criteriaTable += "</table>";
+
+  emailjs.send(
+    "PASTE_YOUR_SERVICE_ID_HERE",
+    "template_piksyi9",
+    {
+      to_email: userEmail,
+      organization: organizationName,
+      total_score: totalScore,
+      total_max: totalMax,
+      total_percent: Math.round((totalScore / totalMax) * 100),
+      criteria_table: criteriaTable,
+      recommendations: recommendations
+    }
+  ).then(
+    () => console.log("Email sent"),
+    (err) => console.error("EmailJS error", err)
+  );
+}
