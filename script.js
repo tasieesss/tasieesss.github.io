@@ -1,8 +1,19 @@
 /* script.js */
-/* global testData, Chart */
+/* global testData */
 
 (() => {
   'use strict';
+
+  // ---------- Test mode (for quick QA) ----------
+  // true  -> only first TEST_LIMIT questions are used (you don't delete the rest)
+  // false -> use all questions
+  const TEST_MODE = true;
+  const TEST_LIMIT = 10;
+
+  function getQuestions() {
+    return TEST_MODE ? testData.questions.slice(0, TEST_LIMIT) : testData.questions;
+  }
+
 
   // ---------- State ----------
   let currentQuestionIndex = 0;
@@ -41,7 +52,7 @@
 
   // ---------- UI ----------
   function renderQuestion(index) {
-    const q = testData.questions[index];
+    const q = getQuestions()[index];
     const container = $('question-container');
 
     const answered = Number.isFinite(answers[index]);
@@ -51,7 +62,7 @@
       <div class="question-container">
         <div class="question-meta">
           <span class="badge">${q.criterion}</span>
-          <span>Питання ${index + 1} / ${testData.questions.length} • ID: ${q.id}</span>
+          <span>Питання ${index + 1} / ${getQuestions().length} • ID: ${q.id}</span>
         </div>
         <div class="question">${q.text}</div>
         <div class="options">
@@ -80,7 +91,7 @@
     // Buttons state
     enableNextButtons(answered);
 
-    const isLast = index === testData.questions.length - 1;
+    const isLast = index === getQuestions().length - 1;
     $('next-btn').classList.toggle('hidden', isLast);
     $('finish-btn').classList.toggle('hidden', !isLast);
 
@@ -89,14 +100,14 @@
   }
 
   function updateProgress() {
-    const total = testData.questions.length;
+    const total = getQuestions().length;
     const progress = ((currentQuestionIndex + 1) / total) * 100;
     $('progress').style.width = `${progress}%`;
     $('progress-text').textContent = `Прогрес: ${currentQuestionIndex + 1} із ${total}`;
   }
 
   function enableNextButtons(enabled) {
-    const isLast = currentQuestionIndex === testData.questions.length - 1;
+    const isLast = currentQuestionIndex === getQuestions().length - 1;
     if (isLast) {
       $('finish-btn').disabled = !enabled;
     } else {
@@ -116,12 +127,31 @@
 
   // ---------- Calculations ----------
   function calculate() {
+    const qs = getQuestions();
     const byCriterion = {};
-    const criteria = uniq(testData.questions.map(q => q.criterion));
+    const criteria = uniq(qs.map(q => q.criterion));
 
     for (const crit of criteria) {
       byCriterion[crit] = { score: 0, maxScore: 0, questions: [] };
     }
+
+    let totalScore = 0;
+    let totalMax = 0;
+
+    qs.forEach((q, idx) => {
+      const val = Number.isFinite(answers[idx]) ? answers[idx] : 0;
+      const maxVal = getMaxOptionValue(q);
+
+      totalScore += val;
+      totalMax += maxVal;
+
+      byCriterion[q.criterion].score += val;
+      byCriterion[q.criterion].maxScore += maxVal;
+      byCriterion[q.criterion].questions.push({ q, idx, val, maxVal, optIndex: selectedOptionIndex[idx] });
+    });
+
+    return { totalScore, totalMax, byCriterion };
+  }
 
     let totalScore = 0;
     let totalMax = 0;
@@ -171,6 +201,7 @@
     }
 
     renderRecommendations(byCriterion);
+    
   }
 
   function renderRecommendations(byCriterion) {
@@ -228,7 +259,26 @@
       container.appendChild(block);
     }
   }
-  
+
+    canvas._chart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels,
+        datasets: [{
+          label: '% за критерієм',
+          data: values,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          r: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 20 } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
   // ---------- Particles ----------
   function createParticles() {
     const holder = $('particles');
@@ -269,13 +319,13 @@
 
   function next() {
     if (!saveCurrentAnswer()) return;
-    currentQuestionIndex = clamp(currentQuestionIndex + 1, 0, testData.questions.length - 1);
+    currentQuestionIndex = clamp(currentQuestionIndex + 1, 0, getQuestions().length - 1);
     renderQuestion(currentQuestionIndex);
   }
 
   function back() {
     // allow going back without changing answer
-    currentQuestionIndex = clamp(currentQuestionIndex - 1, 0, testData.questions.length - 1);
+    currentQuestionIndex = clamp(currentQuestionIndex - 1, 0, getQuestions().length - 1);
     renderQuestion(currentQuestionIndex);
   }
 
@@ -311,7 +361,7 @@
         k,
         { score: v.score, maxScore: v.maxScore, pct: v.maxScore ? Math.round((v.score / v.maxScore) * 100) : 0 }
       ]))),
-      answers: testData.questions.map((q, idx) => ({
+      answers: getQuestions().map((q, idx) => ({
         id: q.id,
         criterion: q.criterion,
         question: q.text,
