@@ -171,7 +171,6 @@
     }
 
     renderRecommendations(byCriterion);
-    renderRadar(byCriterion);
   }
 
   function renderRecommendations(byCriterion) {
@@ -228,41 +227,6 @@
       `;
       container.appendChild(block);
     }
-  }
-
-  function renderRadar(byCriterion) {
-    const canvas = $('radar');
-    if (!canvas || typeof Chart === 'undefined') return;
-
-    const labels = Object.keys(byCriterion);
-    const values = labels.map(c => {
-      const { score, maxScore } = byCriterion[c];
-      return maxScore ? Math.round((score / maxScore) * 100) : 0;
-    });
-
-    // destroy previous chart (if any)
-    if (canvas._chart) {
-      canvas._chart.destroy();
-      canvas._chart = null;
-    }
-
-    canvas._chart = new Chart(canvas, {
-      type: 'radar',
-      data: {
-        labels,
-        datasets: [{
-          label: '% за критерієм',
-          data: values,
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          r: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 20 } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
   }
 
   // ---------- Particles ----------
