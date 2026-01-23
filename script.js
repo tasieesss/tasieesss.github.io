@@ -338,6 +338,7 @@
 
     createParticles();
     renderResults();
+    renderAllRecommendations(calculate());
   }
 
   function restart() {
@@ -501,7 +502,8 @@ function downloadPdf() {
     }
 
     const safeOrg = (orgLine || "results").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 60);
-    doc.save(`Результати_${safeOrg}.pdf`);
+    pdfAddAllRecommendations(doc, y);
+        doc.save(`Результати_${safeOrg}.pdf`);
   } catch (e) {
     console.error(e);
     alert("Помилка генерації PDF. Відкрийте консоль (F12) для деталей.");
@@ -521,3 +523,105 @@ function downloadPdf() {
     createParticles();
   });
 })();
+
+
+// ===== Helpers for recommendations =====
+function getSelectedOption(q, qIndex){
+  // selectedOptionIndex should exist; fallback to value match
+  if (typeof selectedOptionIndex !== 'undefined' && Number.isInteger(selectedOptionIndex[qIndex])){
+    return q.options[selectedOptionIndex[qIndex]] || null;
+  }
+  // fallback: match by value
+  const val = Number.isFinite(answers[qIndex]) ? answers[qIndex] : null;
+  if (val === null) return null;
+  return q.options.find(o => o.value === val) || null;
+}
+
+
+function renderAllRecommendations(results){
+  const container = document.getElementById("recommendations-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const qs = getQuestions();
+  const groups = {}; // criterion -> [{text, qid}]
+
+  qs.forEach((q, idx) => {
+    const opt = getSelectedOption(q, idx);
+    if (!opt || !opt.recommendation) return;
+    if (!groups[q.criterion]) groups[q.criterion] = [];
+    groups[q.criterion].push({
+      qid: q.id || (idx+1),
+      text: opt.recommendation
+    });
+  });
+
+  Object.entries(groups).forEach(([criterion, items]) => {
+    const block = document.createElement("div");
+    block.className = "recommendation-block";
+
+    const h = document.createElement("h4");
+    h.className = "recommendation-criterion";
+    h.textContent = criterion;
+    block.appendChild(h);
+
+    const ol = document.createElement("ol");
+    ol.className = "recommendation-list";
+
+    items.forEach(it => {
+      const li = document.createElement("li");
+      li.textContent = it.text;
+      ol.appendChild(li);
+    });
+
+    block.appendChild(ol);
+    container.appendChild(block);
+  });
+}
+
+
+// ===== PDF: ALL RECOMMENDATIONS (grouped by criterion) =====
+function pdfAddAllRecommendations(doc, startY){
+  const marginX = 40;
+  let y = startY;
+  const pageHeight = doc.internal.pageSize.height;
+
+  const blocks = document.querySelectorAll(".recommendation-block");
+  if (!blocks.length) return y;
+
+  doc.setFont("DejaVu", "bold");
+  doc.setFontSize(12);
+  doc.text("Рекомендації за всіма питаннями", marginX, y);
+  y += 14;
+
+  blocks.forEach(block => {
+    const title = block.querySelector(".recommendation-criterion")?.textContent || "";
+    const items = block.querySelectorAll("li");
+
+    if (y > pageHeight - 60) { doc.addPage(); y = 48; }
+
+    doc.setFont("DejaVu", "bold");
+    doc.setFontSize(11);
+    doc.text(title, marginX, y);
+    y += 10;
+
+    doc.setFont("DejaVu", "normal");
+    doc.setFontSize(10);
+
+    let idx = 1;
+    items.forEach(li => {
+      const text = `${idx}. ${li.textContent}`;
+      const lines = doc.splitTextToSize(text, doc.internal.pageSize.width - marginX*2);
+      if (y + lines.length*14 > pageHeight - 40) {
+        doc.addPage(); y = 48;
+      }
+      doc.text(lines, marginX, y);
+      y += lines.length*14 + 4;
+      idx += 1;
+    });
+
+    y += 6;
+  });
+
+  return y;
+}
