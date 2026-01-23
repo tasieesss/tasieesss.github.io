@@ -625,3 +625,27 @@ function pdfAddAllRecommendations(doc, startY){
 
   return y;
 }
+
+
+// ===== Start Test (safe binding) =====
+function startTest(){
+  try {
+    if (typeof initTest === "function") {
+      initTest();
+      return;
+    }
+    // Fallback: basic start
+    const startScreen = document.getElementById("start-screen");
+    const testScreen = document.getElementById("test-screen");
+    if (startScreen) startScreen.style.display = "none";
+    if (testScreen) testScreen.style.display = "block";
+    currentIndex = 0;
+    answers = [];
+    selectedOptionIndex = [];
+    renderQuestion(0);
+  } catch (e) {
+    console.error(e);
+    alert("Помилка запуску тесту. Відкрийте консоль (F12).");
+  }
+}
+window.startTest = startTest;
