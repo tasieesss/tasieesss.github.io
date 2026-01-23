@@ -4,164 +4,150 @@
 (() => {
   'use strict';
 
-  // ---------------- Test Mode ----------------
-  // Enable quickly without deleting questions:
-  // 1) Add ?test=1 to the URL (recommended), OR
-  // 2) In DevTools console run: localStorage.setItem('TEST_MODE','1') then reload
-  // Disable: remove ?test=1 and run localStorage.removeItem('TEST_MODE')
-  const TEST_LIMIT = 10;
-  const TEST_MODE =
-    new URLSearchParams(window.location.search).has('test') ||
-    window.localStorage.getItem('TEST_MODE') === '1';
-
-  const getQuestions = () =>
-    TEST_MODE ? testData.questions.slice(0, TEST_LIMIT) : testData.questions;
-
-  // ---------------- State ----------------
-  let current = 0;
-  const answers = []; // numeric value per question
-  const selectedOptIndex = []; // option index per question (for per-question recommendation)
+  // ---------- State ----------
+  let currentQuestionIndex = 0;
   let organizationName = '';
-  let userEmail = '';
 
-  // ---------------- Helpers ----------------
+  // Answer storage
+  const answers = [];            // numeric values per question index
+  const selectedOptionIndex = []; // option index per question index (for per-answer recommendations)
+
+  // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
 
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const maxOptionValue = (q) => Math.max(...q.options.map((o) => Number(o.value)));
-
   const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+  const getMaxOptionValue = (q) => Math.max(...q.options.map(o => Number(o.value)));
 
-  const pct = (score, max) => (max ? Math.round((score / max) * 100) : 0);
-
-  function getLevel(score, max) {
-    const p = pct(score, max);
-    if (p >= 70) return 'high';
-    if (p >= 40) return 'medium';
+  function getLevel(score, maxScore) {
+    if (!maxScore) return 'low';
+    const pct = (score / maxScore) * 100;
+    if (pct >= 70) return 'high';
+    if (pct >= 40) return 'medium';
     return 'low';
   }
 
-  const getLevelText = (lvl) => (lvl === 'high' ? 'Високий' : lvl === 'medium' ? 'Середній' : 'Низький');
-
-  // ---------------- UI: Questions ----------------
-  function updateProgress() {
-    const total = getQuestions().length;
-    const progress = ((current + 1) / total) * 100;
-    $('progress').style.width = `${progress}%`;
-    $('progress-text').textContent = `Прогрес: ${current + 1} із ${total}${TEST_MODE ? ` • ТЕСТОВИЙ РЕЖИМ (${TEST_LIMIT})` : ''}`;
+  function getLevelText(level) {
+    if (level === 'high') return 'Високий';
+    if (level === 'medium') return 'Середній';
+    return 'Низький';
   }
 
-  function setNavButtonsState() {
-    const total = getQuestions().length;
-    const answered = Number.isFinite(answers[current]);
-    const isLast = current === total - 1;
+  function fmtPct(score, max) {
+    if (!max) return '0%';
+    return `${Math.round((score / max) * 100)}%`;
+  }
 
-    $('back-btn').disabled = current === 0;
-    $('next-btn').classList.toggle('hidden', isLast);
-    $('finish-btn').classList.toggle('hidden', !isLast);
+  // ---------- UI: Questions ----------
+  function updateProgress() {
+    const total = testData.questions.length;
+    const progress = ((currentQuestionIndex + 1) / total) * 100;
+    $('progress').style.width = `${progress}%`;
+    $('progress-text').textContent = `Прогрес: ${currentQuestionIndex + 1} із ${total}`;
+  }
 
-    if (isLast) $('finish-btn').disabled = !answered;
-    else $('next-btn').disabled = !answered;
+  function enableNextButtons(enabled) {
+    const isLast = currentQuestionIndex === testData.questions.length - 1;
+    $('next-btn').disabled = isLast ? true : !enabled;
+    $('finish-btn').disabled = isLast ? !enabled : true;
   }
 
   function renderQuestion(index) {
-    const q = getQuestions()[index];
+    const q = testData.questions[index];
     const container = $('question-container');
 
-    const chosenIdx = selectedOptIndex[index];
+    const answered = Number.isFinite(answers[index]);
+    const selectedIdx = selectedOptionIndex[index];
 
     container.innerHTML = `
       <div class="question-container">
         <div class="question-meta">
           <span class="badge">${q.criterion}</span>
-          <span>Питання ${index + 1} / ${getQuestions().length} • ID: ${q.id}</span>
+          <span>Питання ${index + 1} / ${testData.questions.length}</span>
         </div>
         <div class="question">${q.text}</div>
         <div class="options">
-          ${q.options
-            .map((opt, optIndex) => {
-              const checked = Number.isFinite(chosenIdx) && chosenIdx === optIndex ? 'checked' : '';
-              return `
-                <label class="option">
-                  <input type="radio"
-                         name="question_${index}"
-                         value="${opt.value}"
-                         data-opt-index="${optIndex}"
-                         ${checked} />
-                  <span>${opt.text}</span>
-                </label>
-              `;
-            })
-            .join('')}
+          ${q.options.map((opt, optIndex) => {
+            const checked = answered && selectedIdx === optIndex ? 'checked' : '';
+            return `
+              <label class="option">
+                <input type="radio" name="question_${index}" value="${opt.value}" data-opt-index="${optIndex}" ${checked} />
+                <span>${opt.text}</span>
+              </label>
+            `;
+          }).join('')}
         </div>
       </div>
     `;
 
     container.querySelectorAll(`input[name="question_${index}"]`).forEach((el) => {
-      el.addEventListener('change', () => {
-        const val = Number(el.value);
-        const oi = Number(el.dataset.optIndex);
-        answers[index] = val;
-        selectedOptIndex[index] = oi;
-        setNavButtonsState();
-      });
+      el.addEventListener('change', () => enableNextButtons(true));
     });
 
+    // nav buttons
+    $('back-btn').disabled = index === 0;
+
+    const isLast = index === testData.questions.length - 1;
+    $('next-btn').classList.toggle('hidden', isLast);
+    $('finish-btn').classList.toggle('hidden', !isLast);
+
     updateProgress();
-    setNavButtonsState();
+    enableNextButtons(answered);
   }
 
-  // ---------------- Calculations ----------------
-  function calculate() {
-    const qs = getQuestions();
+  function saveCurrentAnswer() {
+    const selected = document.querySelector(`input[name="question_${currentQuestionIndex}"]:checked`);
+    if (!selected) return false;
+    answers[currentQuestionIndex] = Number(selected.value);
+    selectedOptionIndex[currentQuestionIndex] = Number(selected.dataset.optIndex);
+    return true;
+  }
 
+  // ---------- Calculations ----------
+  function calculate() {
     const byCriterion = {};
     let totalScore = 0;
     let totalMax = 0;
 
-    qs.forEach((q, idx) => {
+    testData.questions.forEach((q, idx) => {
       const val = Number.isFinite(answers[idx]) ? answers[idx] : 0;
-      const maxVal = maxOptionValue(q);
+      const maxVal = getMaxOptionValue(q);
 
       totalScore += val;
       totalMax += maxVal;
 
-      if (!byCriterion[q.criterion]) byCriterion[q.criterion] = { score: 0, maxScore: 0, questions: [] };
-
+      if (!byCriterion[q.criterion]) {
+        byCriterion[q.criterion] = { score: 0, maxScore: 0, questions: [] };
+      }
       byCriterion[q.criterion].score += val;
       byCriterion[q.criterion].maxScore += maxVal;
-      byCriterion[q.criterion].questions.push({
-        q,
-        idx,
-        val,
-        maxVal,
-        optIndex: Number.isFinite(selectedOptIndex[idx]) ? selectedOptIndex[idx] : null
-      });
+      byCriterion[q.criterion].questions.push({ q, idx, val, maxVal, optIndex: selectedOptionIndex[idx] });
     });
 
     return { totalScore, totalMax, byCriterion };
   }
 
-  // ---------------- Results Rendering ----------------
+  // ---------- UI: Results ----------
   function renderResults() {
     const { totalScore, totalMax, byCriterion } = calculate();
 
     $('total-score').textContent = `${totalScore}`;
     $('total-max').textContent = `${totalMax}`;
-    $('total-pct').textContent = `${pct(totalScore, totalMax)}%`;
+    $('total-pct').textContent = fmtPct(totalScore, totalMax);
 
     const tbody = $('results-tbody');
     tbody.innerHTML = '';
 
     for (const [crit, payload] of Object.entries(byCriterion)) {
-      const level = getLevel(payload.score, payload.maxScore);
+      const score = payload.score;
+      const maxScore = payload.maxScore;
+      const level = getLevel(score, maxScore);
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${crit}</td>
-        <td>${payload.maxScore}</td>
-        <td>${payload.score}</td>
-        <td>${pct(payload.score, payload.maxScore)}%</td>
+        <td>${maxScore}</td>
+        <td>${score}</td>
+        <td>${fmtPct(score, maxScore)}</td>
         <td><span class="level-pill level-${level}">${getLevelText(level)}</span></td>
       `;
       tbody.appendChild(tr);
@@ -175,27 +161,27 @@
     container.innerHTML = '';
 
     for (const [crit, payload] of Object.entries(byCriterion)) {
-      const level = getLevel(payload.score, payload.maxScore);
+      const { score, maxScore } = payload;
+      const level = getLevel(score, maxScore);
 
-      // Take up to 3 unique, most impactful per-question recommendations (where selected value != max)
-      const items = payload.questions
+      const actionable = payload.questions
         .map(({ q, val, maxVal, optIndex }) => {
           const deficit = maxVal - val;
-          const rec = optIndex != null && q.options[optIndex] ? q.options[optIndex].recommendation : '';
-          return { deficit, rec, qText: q.text, id: q.id };
+          const rec = (Number.isFinite(optIndex) && q.options[optIndex]) ? q.options[optIndex].recommendation : '';
+          return { deficit, rec, qText: q.text, id: q.id, val, maxVal };
         })
-        .filter((x) => x.deficit > 0 && x.rec)
+        .filter(x => x.deficit > 0 && x.rec)
         .sort((a, b) => b.deficit - a.deficit);
 
-      const unique = [];
-      for (const it of items) {
-        if (!unique.some((u) => u.rec === it.rec)) unique.push(it);
-        if (unique.length >= 3) break;
+      const uniqueRecs = [];
+      for (const item of actionable) {
+        if (!uniqueRecs.some(r => r.rec === item.rec)) uniqueRecs.push(item);
+        if (uniqueRecs.length >= 3) break;
       }
 
-      const general =
+      const generalHint =
         level === 'high'
-          ? 'Сильний результат — підтримуйте системність та робіть точкові покращення.'
+          ? 'Сильний результат — підтримуйте системність і робіть точкові покращення.'
           : level === 'medium'
             ? 'Середній рівень — пріоритезуйте покращення в процесах із найбільшими прогалинами.'
             : 'Низький рівень — потрібні системні зміни та формалізація процесів. Почніть із базових практик.';
@@ -204,35 +190,27 @@
       block.className = 'recommendation-item';
       block.innerHTML = `
         <div class="recommendation-title">Критерій: ${crit}</div>
-        <p><strong>Рівень:</strong> ${getLevelText(level)} (${pct(payload.score, payload.maxScore)}%)</p>
-        <p>${general}</p>
-        ${
-          unique.length
-            ? `
-          <div class="rec-steps">
+        <p><strong>Рівень:</strong> ${getLevelText(level)} (${fmtPct(score, maxScore)})</p>
+        <p>${generalHint}</p>
+        ${uniqueRecs.length ? `
+          <div style="margin-top:10px">
             <strong>Пріоритетні кроки:</strong>
-            <ol>
-              ${unique
-                .map(
-                  (x) => `
-                <li>
-                  <div class="rec-q"><span class="rec-id">${x.id}</span>${x.qText}</div>
-                  <div class="rec-t">${x.rec}</div>
+            <ol style="margin:8px 0 0 18px">
+              ${uniqueRecs.map(x => `
+                <li style="margin:6px 0">
+                  <div style="font-weight:700">${x.id ? `${x.id} • ` : ''}${x.qText}</div>
+                  <div style="color:#374151">${x.rec}</div>
                 </li>
-              `
-                )
-                .join('')}
+              `).join('')}
             </ol>
           </div>
-        `
-            : `<p style="margin-top:10px"><em>Пріоритетних рекомендацій не знайдено (відповіді близькі до максимуму).</em></p>`
-        }
+        ` : `<p style="margin-top:10px"><em>За вашими відповідями пріоритетних рекомендацій не знайдено.</em></p>`}
       `;
       container.appendChild(block);
     }
   }
 
-  // ---------------- Particles ----------------
+  // ---------- Particles ----------
   function createParticles() {
     const holder = $('particles');
     if (!holder) return;
@@ -249,148 +227,71 @@
     }
   }
 
-  // ---------------- Flow ----------------
+  // ---------- Flow ----------
   function start() {
     organizationName = $('organization').value.trim();
-    userEmail = $('email').value.trim();
 
-    if (!organizationName || !userEmail) {
-      alert('Будь ласка, заповніть всі поля.');
-      return;
-    }
-    if (!validateEmail(userEmail)) {
-      alert('Будь ласка, введіть коректну електронну адресу.');
+    if (!organizationName) {
+      alert('Будь ласка, введіть назву організації.');
       return;
     }
 
-    // reset answers for a new run
+    // reset
     answers.length = 0;
-    selectedOptIndex.length = 0;
+    selectedOptionIndex.length = 0;
+    currentQuestionIndex = 0;
 
     $('start-page').classList.add('hidden');
     $('results-page').classList.add('hidden');
     $('test-page').classList.remove('hidden');
 
-    current = 0;
-    renderQuestion(current);
+    renderQuestion(currentQuestionIndex);
   }
 
   function next() {
-    const total = getQuestions().length;
-    current = clamp(current + 1, 0, total - 1);
-    renderQuestion(current);
+    if (!saveCurrentAnswer()) return;
+    currentQuestionIndex = clamp(currentQuestionIndex + 1, 0, testData.questions.length - 1);
+    renderQuestion(currentQuestionIndex);
   }
 
   function back() {
-    const total = getQuestions().length;
-    current = clamp(current - 1, 0, total - 1);
-    renderQuestion(current);
+    currentQuestionIndex = clamp(currentQuestionIndex - 1, 0, testData.questions.length - 1);
+    renderQuestion(currentQuestionIndex);
   }
 
   function finish() {
+    if (!saveCurrentAnswer()) return;
     $('test-page').classList.add('hidden');
     $('results-page').classList.remove('hidden');
-    $('org-name').textContent = `${organizationName} • ${userEmail}`;
+
+    $('org-name').textContent = organizationName;
 
     createParticles();
     renderResults();
   }
 
   function restart() {
-    answers.length = 0;
-    selectedOptIndex.length = 0;
-
     $('results-page').classList.add('hidden');
     $('test-page').classList.add('hidden');
     $('start-page').classList.remove('hidden');
     $('organization').focus();
   }
 
-  function copyResultsJson() {
-    const { totalScore, totalMax, byCriterion } = calculate();
-    const payload = {
-      organizationName,
-      userEmail,
-      testMode: TEST_MODE,
-      totalScore,
-      totalMax,
-      totalPct: pct(totalScore, totalMax),
-      byCriterion: Object.fromEntries(
-        Object.entries(byCriterion).map(([k, v]) => [
-          k,
-          { score: v.score, maxScore: v.maxScore, pct: pct(v.score, v.maxScore) }
-        ])
-      ),
-      answers: getQuestions().map((q, idx) => ({
-        id: q.id,
-        criterion: q.criterion,
-        question: q.text,
-        value: Number.isFinite(answers[idx]) ? answers[idx] : 0
-      }))
-    };
-
-    navigator.clipboard
-      .writeText(JSON.stringify(payload, null, 2))
-      .then(() => alert('Результати (JSON) скопійовано в буфер обміну.'))
-      .catch(() => alert('Не вдалося скопіювати. (Браузер може блокувати clipboard для file://)'));
+  function downloadPdf() {
+    // Uses the browser print dialog. User can choose "Save as PDF".
+    window.print();
   }
 
-  // ---------------- Wire up ----------------
+  // ---------- Wire up ----------
   document.addEventListener('DOMContentLoaded', () => {
     $('start-btn').addEventListener('click', start);
     $('next-btn').addEventListener('click', next);
     $('back-btn').addEventListener('click', back);
     $('finish-btn').addEventListener('click', finish);
     $('restart').addEventListener('click', restart);
-    $('copy-json').addEventListener('click', copyResultsJson);
+    $('download-pdf').addEventListener('click', downloadPdf);
 
+    // subtle particles on first load
     createParticles();
   });
 })();
-// ===== EmailJS integration =====
-function sendResultsByEmail(results) {
-  const { totalScore, totalMax, byCriterion } = results;
-
-  let criteriaTable = `
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse">
-      <tr>
-        <th>Критерій</th><th>Макс</th><th>Бал</th><th>%</th><th>Рівень</th>
-      </tr>`;
-
-  let recommendations = "";
-
-  for (const [crit, data] of Object.entries(byCriterion)) {
-    const pct = Math.round((data.score / data.maxScore) * 100);
-    const level = pct >= 70 ? "Високий" : pct >= 40 ? "Середній" : "Низький";
-
-    criteriaTable += `
-      <tr>
-        <td>${crit}</td>
-        <td>${data.maxScore}</td>
-        <td>${data.score}</td>
-        <td>${pct}%</td>
-        <td>${level}</td>
-      </tr>`;
-
-    recommendations += `<p><strong>${crit}:</strong> ${level}</p>`;
-  }
-
-  criteriaTable += "</table>";
-
-  emailjs.send(
-    "PASTE_YOUR_SERVICE_ID_HERE",
-    "template_piksyi9",
-    {
-      to_email: userEmail,
-      organization: organizationName,
-      total_score: totalScore,
-      total_max: totalMax,
-      total_percent: Math.round((totalScore / totalMax) * 100),
-      criteria_table: criteriaTable,
-      recommendations: recommendations
-    }
-  ).then(
-    () => console.log("Email sent"),
-    (err) => console.error("EmailJS error", err)
-  );
-}

@@ -31,15 +31,10 @@
         </ul>
       </div>
 
-      <div class="form-grid">
+      <div class="form-grid one">
         <div class="form-group">
           <label for="organization">Назва організації</label>
           <input type="text" id="organization" placeholder="Назва вашої організації" autocomplete="organization" />
-        </div>
-
-        <div class="form-group">
-          <label for="email">Email для отримання результатів</label>
-          <input type="email" id="email" placeholder="your@email.com" autocomplete="email" />
         </div>
       </div>
 
@@ -90,7 +85,7 @@
             </div>
           </div>
         </div>
-<table class="results-table" aria-label="Таблиця результатів">
+	<table class="results-table" aria-label="Таблиця результатів">
         <thead>
           <tr>
             <th>Критерій</th>
@@ -100,32 +95,26 @@
             <th>Рівень</th>
           </tr>
         </thead>
-        <tbody id="results-tbody"></tbody>
-      </table>
+	      <tbody id="results-tbody"></tbody>
+	    </table>
+	  </div>
 
-            </div>
-
-      <div class="recommendations">
+	  <div class="recommendations">
         <h3>Рекомендації щодо удосконалення</h3>
         <p class="hint">Сформовано на основі ваших відповідей (обраних варіантів) та рівня по критерію.</p>
         <div id="recommendations-container"></div>
 
         <div class="actions">
-          <button class="btn btn-secondary" id="copy-json" type="button">Скопіювати результати (JSON)</button>
+          <button class="btn btn-secondary" id="download-pdf" type="button">Завантажити PDF</button>
           <button class="btn" id="restart" type="button">Пройти ще раз</button>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Optional: Chart.js for radar chart -->
 <!-- Data + logic -->
   <script src="testData.js"></script>
   <script src="script.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-<script>
-  emailjs.init("XtEqmJN2nmfftG2Zv");
-</script>
 </body>
-
 </html>

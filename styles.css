@@ -122,6 +122,9 @@ body::before{
   gap: 16px;
 }
 
+/* single input layout (used when email is removed) */
+.form-grid.one{ grid-template-columns: 1fr; }
+
 .form-group{ margin-bottom: 0; }
 label{
   display:block;
@@ -280,7 +283,12 @@ input:focus{
   margin-bottom: 22px;
 }
 
-.results-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:18px;}
+.results-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
 
 .card{
   padding: 18px;
@@ -403,7 +411,10 @@ input:focus{
 
 
 /* results in one column */
-.results-stack{display:flex;flex-direction:column;gap:16px;margin-bottom:18px;}
+.results-stack{
+  display:block;
+  margin-bottom:18px;
+}
 .results-stack .card{
   width:100%;
 }
@@ -411,10 +422,14 @@ input:focus{
   display:block !important;
 }
 
-
-/* recommendation steps formatting */
-.rec-steps{margin-top:10px}
-.rec-steps ol{margin:8px 0 0 18px}
-.rec-q{font-weight:700;margin:6px 0 2px 0}
-.rec-id{display:inline-block;margin-right:8px;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,.12);color:#4f46e5;font-weight:700}
-.rec-t{color:#374151}
+/* Print (Save as PDF) */
+@media print{
+  body{ background:#fff !important; animation:none !important; }
+  body::before{ display:none !important; }
+  .floating-particles{ display:none !important; }
+  .container{ box-shadow:none !important; border:none !important; margin:0 !important; max-width:none !important; }
+  #start-page, #test-page{ display:none !important; }
+  #results-page{ display:block !important; }
+  .btn, .actions{ display:none !important; }
+  .results-header{ box-shadow:none !important; }
+}
