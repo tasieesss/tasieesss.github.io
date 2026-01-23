@@ -20,10 +20,7 @@
       </header>
 
       
-      <div class="results-actions">
-        <button class="btn btn-secondary" id="pdf-btn" onclick="downloadPdf()">Завантажити PDF</button>
-      </div>
-<div class="instruction">
+      <div class="instruction">
         <h3>Інструкція</h3>
         <p>
           Дайте відповіді на всі питання. Оберіть <strong>тільки одну відповідь</strong>, яка найкраще характеризує вашу організацію.
@@ -40,7 +37,12 @@
           <label for="organization">Назва організації</label>
           <input type="text" id="organization" placeholder="Назва вашої організації" autocomplete="organization" />
         </div>
-      </div>
+      
+<div class="form-group">
+  <label for="email">Електронну пошту для отримання результатів:</label>
+  <input type="email" id="email" placeholder="your@email.com">
+</div>
+</div>
 
       <button class="btn" id="start-btn" type="button">Почати тест</button>
     </section>
@@ -89,7 +91,11 @@
             </div>
           </div>
         </div>
-	<table class="results-table" aria-label="Таблиця результатів">
+	
+      <div class="results-actions">
+        <button class="btn btn-secondary" id="pdf-btn" onclick="downloadPdf()">Завантажити PDF</button>
+      </div>
+<table class="results-table" aria-label="Таблиця результатів">
         <thead>
           <tr>
             <th>Критерій</th>
