@@ -19,7 +19,11 @@
         <p class="subtitle">Опитувальник для керівництва (самооцінка)</p>
       </header>
 
-      <div class="instruction">
+      
+      <div class="results-actions">
+        <button class="btn btn-secondary" id="pdf-btn" onclick="downloadPdf()">Завантажити PDF</button>
+      </div>
+<div class="instruction">
         <h3>Інструкція</h3>
         <p>
           Дайте відповіді на всі питання. Оберіть <strong>тільки одну відповідь</strong>, яка найкраще характеризує вашу організацію.
@@ -115,6 +119,8 @@
   <!-- Optional: Chart.js for radar chart -->
 <!-- Data + logic -->
   <script src="testData.js"></script>
-  <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.29/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
