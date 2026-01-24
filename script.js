@@ -305,6 +305,9 @@
       alert('Будь ласка, заповніть всі поля.');
       return;
     }
+
+    // Expose старт для inline onclick
+    window.startTest = start;
     if (!validateEmail(userEmail)) {
       alert('Будь ласка, введіть коректну електронну адресу.');
       return;
@@ -512,12 +515,12 @@ function downloadPdf() {
 
 // ---------- Wire up ----------
   document.addEventListener('DOMContentLoaded', () => {
-    $('start-btn').addEventListener('click', start);
-    $('next-btn').addEventListener('click', next);
-    $('back-btn').addEventListener('click', back);
-    $('finish-btn').addEventListener('click', finish);
-    $('restart').addEventListener('click', restart);
-    $('download-pdf').addEventListener('click', downloadPdf);
+    const sb=$('start-btn'); if(sb) sb.addEventListener('click', start);
+    const el_next_btn=$('next-btn'); if(el_next_btn) el_next_btn.addEventListener('click', next);
+    const el_back_btn=$('back-btn'); if(el_back_btn) el_back_btn.addEventListener('click', back);
+    const el_finish_btn=$('finish-btn'); if(el_finish_btn) el_finish_btn.addEventListener('click', finish);
+    const el_restart=$('restart'); if(el_restart) el_restart.addEventListener('click', restart);
+    const el_download_pdf=$('download-pdf'); if(el_download_pdf) el_download_pdf.addEventListener('click', downloadPdf);
 
     // subtle particles on first load
     createParticles();
@@ -627,25 +630,3 @@ function pdfAddAllRecommendations(doc, startY){
 }
 
 
-// ===== Start Test (safe binding) =====
-function startTest(){
-  try {
-    if (typeof initTest === "function") {
-      initTest();
-      return;
-    }
-    // Fallback: basic start
-    const startScreen = document.getElementById("start-screen");
-    const testScreen = document.getElementById("test-screen");
-    if (startScreen) startScreen.style.display = "none";
-    if (testScreen) testScreen.style.display = "block";
-    currentIndex = 0;
-    answers = [];
-    selectedOptionIndex = [];
-    renderQuestion(0);
-  } catch (e) {
-    console.error(e);
-    alert("Помилка запуску тесту. Відкрийте консоль (F12).");
-  }
-}
-window.startTest = startTest;
