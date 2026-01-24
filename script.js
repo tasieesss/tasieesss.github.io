@@ -25,6 +25,13 @@
   // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
 
+
+function safeOn(id, evt, fn){
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(evt, fn);
+}
+
+
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const uniq = (arr) => [...new Set(arr)];
@@ -305,9 +312,6 @@
       alert('Будь ласка, заповніть всі поля.');
       return;
     }
-
-    // Expose старт для inline onclick
-    window.startTest = start;
     if (!validateEmail(userEmail)) {
       alert('Будь ласка, введіть коректну електронну адресу.');
       return;
@@ -514,15 +518,15 @@ function downloadPdf() {
 }
 
 // ---------- Wire up ----------
+  window.startTest = start;
   document.addEventListener('DOMContentLoaded', () => {
-    const sb=$('start-btn'); if(sb) sb.addEventListener('click', start);
-    const el_next_btn=$('next-btn'); if(el_next_btn) el_next_btn.addEventListener('click', next);
-    const el_back_btn=$('back-btn'); if(el_back_btn) el_back_btn.addEventListener('click', back);
-    const el_finish_btn=$('finish-btn'); if(el_finish_btn) el_finish_btn.addEventListener('click', finish);
-    const el_restart=$('restart'); if(el_restart) el_restart.addEventListener('click', restart);
-    const el_download_pdf=$('download-pdf'); if(el_download_pdf) el_download_pdf.addEventListener('click', downloadPdf);
-
-    // subtle particles on first load
+    safeOn('start-btn','click', start);
+safeOn('next-btn','click', next);
+safeOn('back-btn','click', back);
+safeOn('finish-btn','click', finish);
+safeOn('restart','click', restart);
+safeOn('download-pdf','click', downloadPdf);
+// subtle particles on first load
     createParticles();
   });
 })();
@@ -628,5 +632,3 @@ function pdfAddAllRecommendations(doc, startY){
 
   return y;
 }
-
-
