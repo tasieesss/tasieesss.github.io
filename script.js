@@ -24,13 +24,6 @@
 
   // ---------- Helpers ----------
   const $ = (id) => document.getElementById(id);
-  const escapeHtml = (str) => String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -142,6 +135,24 @@
       byCriterion[crit] = { score: 0, maxScore: 0, questions: [] };
     }
 
+    let totalScore = 0;
+    let totalMax = 0;
+
+    qs.forEach((q, idx) => {
+      const val = Number.isFinite(answers[idx]) ? answers[idx] : 0;
+      const maxVal = getMaxOptionValue(q);
+
+      totalScore += val;
+      totalMax += maxVal;
+
+      byCriterion[q.criterion].score += val;
+      byCriterion[q.criterion].maxScore += maxVal;
+      byCriterion[q.criterion].questions.push({ q, idx, val, maxVal, optIndex: selectedOptionIndex[idx] });
+    });
+
+    return { totalScore, totalMax, byCriterion };
+  }
+
 
   // ---------- Results Rendering ----------
   function renderResults() {
@@ -176,180 +187,191 @@
     
   }
 
-  function renderRecommendations(byCriterion) {
-    const container = $('recommendations-container');
-    container.innerHTML = '';
+  
+function renderRecommendations(payload) {
+  const container = $("#recommendations-container");
+  container.innerHTML = "";
 
-    for (const [crit, payload] of Object.entries(byCriterion)) {
-      const { score, maxScore } = payload;
-      const level = getLevel(score, maxScore);
+  payload.criteria.forEach((criterionName) => {
+    const block = document.createElement("div");
+    block.className = "recommendation-group";
 
-      // Collect the most “painful” recommendations: those where chosen value is not max.
-      const actionable = payload.questions
-        .map(({ q, val, maxVal, optIndex }) => {
-          const deficit = maxVal - val;
-          const rec = (Number.isFinite(optIndex) && q.options[optIndex]) ? q.options[optIndex].recommendation : '';
-          return { deficit, rec, qText: q.text, id: q.id, val, maxVal };
-        })
-        .filter(x => x.deficit > 0 && x.rec)
-        .sort((a, b) => b.deficit - a.deficit);
+    const h = document.createElement("h4");
+    h.textContent = criterionName;
+    block.appendChild(h);
 
-      // Take up to 3 unique recommendations
-      const uniqueRecs = [];
-      for (const item of actionable) {
-        if (!uniqueRecs.some(r => r.rec === item.rec)) uniqueRecs.push(item);
-        if (uniqueRecs.length >= 3) break;
+    const list = document.createElement("ol");
+    list.className = "recommendation-list";
+
+    const qList = payload.byCriterion[criterionName]?.questions || [];
+    qList.forEach((q, idx) => {
+      const li = document.createElement("li");
+      const rec = q.recommendation || "Рекомендація не знайдена.";
+      li.textContent = rec;
+      list.appendChild(li);
+    });
+
+    block.appendChild(list);
+    container.appendChild(block);
+  });
+}
+
+
+function ensurePdfFont(doc) {
+  if (pdfFontReady) return;
+  // Add fonts to virtual FS and register
+  doc.addFileToVFS("DejaVuSans.ttf", PDF_FONT_REG_BASE64);
+  doc.addFont("DejaVuSans.ttf", "DejaVuSans", "normal");
+
+  doc.addFileToVFS("DejaVuSans-Bold.ttf", PDF_FONT_BOLD_BASE64);
+  doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
+
+  pdfFontReady = true;
+}
+
+
+async function downloadPdf() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("Не вдалося завантажити бібліотеку PDF. Перевірте інтернет-зʼєднання або підключення скриптів jsPDF.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+  initPdfFont(doc);
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const maxW = pageW - margin * 2;
+
+  const title = "Результати тестування";
+  const subtitle = `${state.orgName || ""}${state.email ? " • " + state.email : ""}`.trim();
+
+  let y = margin;
+
+  doc.setFont("DejaVu", "bold");
+  doc.setFontSize(18);
+  doc.text(title, margin, y);
+  y += 22;
+
+  doc.setFont("DejaVu", "normal");
+  doc.setFontSize(11);
+  if (subtitle) {
+    doc.text(subtitle, margin, y);
+    y += 18;
+  }
+
+  doc.setDrawColor(200);
+  doc.line(margin, y, pageW - margin, y);
+  y += 18;
+
+  doc.setFont("DejaVu", "bold");
+  doc.setFontSize(13);
+  doc.text("Загальний підсумок", margin, y);
+  y += 14;
+
+  doc.setFont("DejaVu", "normal");
+  doc.setFontSize(11);
+
+  const total = state.lastResults?.totalScore ?? 0;
+  const max = state.lastResults?.maxTotalScore ?? 0;
+  const pct = state.lastResults ? Math.round((total / (max || 1)) * 100) : 0;
+
+  ["Набрано балів: " + total, "Максимум: " + max, "Відсоток: " + pct + "%"].forEach((t) => {
+    doc.text(t, margin, y);
+    y += 14;
+  });
+
+  y += 10;
+
+  if (doc.autoTable && state.lastResults) {
+    const rows = state.lastResults.criteria.map((c) => ([
+      c.name,
+      String(c.maxScore),
+      String(c.score),
+      `${Math.round(c.percent)}%`,
+      c.levelText
+    ]));
+
+    doc.autoTable({
+      startY: y,
+      head: [["Критерій", "Макс. бал", "Бали", "%", "Рівень"]],
+      body: rows,
+      styles: { font: "DejaVu", fontSize: 9, cellPadding: 6 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
+      columnStyles: { 0: { cellWidth: 240 } },
+      margin: { left: margin, right: margin },
+    });
+
+    y = doc.lastAutoTable.finalY + 18;
+  }
+
+  doc.setFont("DejaVu", "bold");
+  doc.setFontSize(13);
+  doc.text("Рекомендації (100 — по кожному питанню)", margin, y);
+  y += 16;
+
+  doc.setFont("DejaVu", "normal");
+  doc.setFontSize(10);
+
+  const addWrapped = (text, x, y, maxWidth, lineH) => {
+    const lines = doc.splitTextToSize(text, maxWidth);
+    for (const ln of lines) {
+      if (y > pageH - margin) {
+        doc.addPage();
+        initPdfFont(doc);
+        y = margin;
+      }
+      doc.text(ln, x, y);
+      y += lineH;
+    }
+    return y;
+  };
+
+  const res = state.lastResults;
+  if (res) {
+    res.criteria.forEach((crit) => {
+      if (y > pageH - margin - 40) {
+        doc.addPage();
+        initPdfFont(doc);
+        y = margin;
       }
 
-      const generalHint =
-        level === 'high'
-          ? 'Сильний результат — зосередьтеся на точкових покращеннях та підтриманні системності.'
-          : level === 'medium'
-            ? 'Середній рівень — рекомендовано пріоритезувати покращення в процесах, де є найбільші прогалини.'
-            : 'Низький рівень — потрібні системні зміни та формалізація процесів. Почніть із базових практик.';
+      doc.setFont("DejaVu", "bold");
+      doc.setFontSize(11);
+      y = addWrapped(crit.name, margin, y, maxW, 14);
+      y += 4;
 
-      const block = document.createElement('div');
-      block.className = 'recommendation-item';
-      // Build per-question recommendations list (no nested template literals for compatibility)
-      let stepsHtml = '';
-      if (uniqueRecs.length) {
-        const itemsHtml = uniqueRecs.map((x) => (
-          '<li style="margin:6px 0">' +
-            '<div style="font-weight:700">' + escapeHtml(x.id + ' • ' + x.qText) + '</div>' +
-            '<div style="color:#374151">' + escapeHtml(x.rec) + '</div>' +
-          '</li>'
-        )).join('');
-        stepsHtml =
-          '<div style="margin-top:10px">' +
-            '<strong>Пріоритетні кроки:</strong>' +
-            '<ol style="margin:8px 0 0 18px">' +
-              itemsHtml +
-            '</ol>' +
-          '</div>';
-      } else {
-        stepsHtml = '<p style="margin-top:10px"><em>За вашими відповідями пріоритетних рекомендацій не знайдено (всі відповіді близькі до максимуму).</em></p>';
-      }
+      doc.setFont("DejaVu", "normal");
+      doc.setFontSize(10);
 
-      block.innerHTML =
-        '<div class="recommendation-title">Критерій: ' + escapeHtml(crit) + '</div>' +
-        '<p><strong>Рівень:</strong> ' + escapeHtml(getLevelText(level)) + ' (' + escapeHtml(fmtPct(score, maxScore)) + ')</p>' +
-        '<p>' + escapeHtml(generalHint) + '</p>' +
-        stepsHtml;
+      const qList = res.byCriterion[crit.name]?.questions || [];
+      qList.forEach((q, idx) => {
+        const rec = q.recommendation || "Рекомендація не знайдена.";
+        y = addWrapped(`${idx + 1}. ${rec}`, margin + 10, y, maxW - 10, 13);
+      });
 
-      container.appendChild(block);
-    }
+      y += 10;
+    });
   }
 
-  }
+  const safeName = (state.orgName || "results").replace(/[\\\/:*?"<>|]+/g, "_");
+  doc.save(`Результати_${safeName}.pdf`);
+}
 
-  // ---------- Particles ----------
-  function createParticles() {
-    const holder = $('particles');
-    if (!holder) return;
-    holder.innerHTML = '';
-    const n = 20;
-    for (let i = 0; i < n; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      p.style.left = `${Math.random() * 100}%`;
-      p.style.top = `${Math.random() * 100}%`;
-      p.style.animationDelay = `${Math.random() * 8}s`;
-      p.style.animationDuration = `${(Math.random() * 3 + 5).toFixed(2)}s`;
-      holder.appendChild(p);
-    }
-  }
 
-  // ---------- Flow ----------
-  function start() {
-    organizationName = $('organization').value.trim();
-    userEmail = $('email').value.trim();
-
-    if (!organizationName || !userEmail) {
-      alert('Будь ласка, заповніть всі поля.');
-      return;
-    }
-    if (!validateEmail(userEmail)) {
-      alert('Будь ласка, введіть коректну електронну адресу.');
-      return;
-    }
-
-    $('start-page').classList.add('hidden');
-    $('test-page').classList.remove('hidden');
-
-    currentQuestionIndex = 0;
-    renderQuestion(currentQuestionIndex);
-  }
-
-  function next() {
-    if (!saveCurrentAnswer()) return;
-    currentQuestionIndex = clamp(currentQuestionIndex + 1, 0, getQuestions().length - 1);
-    renderQuestion(currentQuestionIndex);
-  }
-
-  function back() {
-    // allow going back without changing answer
-    currentQuestionIndex = clamp(currentQuestionIndex - 1, 0, getQuestions().length - 1);
-    renderQuestion(currentQuestionIndex);
-  }
-
-  function finish() {
-    if (!saveCurrentAnswer()) return;
-
-    $('test-page').classList.add('hidden');
-    $('results-page').classList.remove('hidden');
-    $('org-name').textContent = `${organizationName} • ${userEmail}`;
-
-    createParticles();
-    renderResults();
-  }
-
-  function restart() {
-    // reset
-    answers.length = 0;
-    selectedOptionIndex.length = 0;
-    $('results-page').classList.add('hidden');
-    $('start-page').classList.remove('hidden');
-    $('organization').focus();
-  }
-
-  function copyResultsJson() {
-    const { totalScore, totalMax, byCriterion } = calculate();
-    const payload = {
-      organizationName,
-      userEmail,
-      totalScore,
-      totalMax,
-      totalPct: totalMax ? Math.round((totalScore / totalMax) * 100) : 0,
-      byCriterion: Object.fromEntries(Object.entries(byCriterion).map(([k, v]) => ([
-        k,
-        { score: v.score, maxScore: v.maxScore, pct: v.maxScore ? Math.round((v.score / v.maxScore) * 100) : 0 }
-      ]))),
-      answers: getQuestions().map((q, idx) => ({
-        id: q.id,
-        criterion: q.criterion,
-        question: q.text,
-        value: Number.isFinite(answers[idx]) ? answers[idx] : 0
-      }))
-    };
-
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
-      .then(() => alert('Результати (JSON) скопійовано в буфер обміну.'))
-      .catch(() => alert('Не вдалося скопіювати. Спробуйте вручну (браузер може блокувати clipboard для file://).'));
-  }
-
-  // ---------- Wire up ----------
+// ---------- Wire up ----------
   document.addEventListener('DOMContentLoaded', () => {
-    const sb=$('start-btn'); if(sb) sb.addEventListener('click', start);
-    const nb=$('next-btn'); if(nb) nb.addEventListener('click', next);
-    const bb=$('back-btn'); if(bb) bb.addEventListener('click', back);
-    const fb=$('finish-btn'); if(fb) fb.addEventListener('click', finish);
-    const rb=$('restart'); if(rb) rb.addEventListener('click', restart);
-    const cj=$('copy-json'); if(cj) cj.addEventListener('click', copyResultsJson);
+    $('start-btn').addEventListener('click', start);
+    $('next-btn').addEventListener('click', next);
+    $('back-btn').addEventListener('click', back);
+    $('finish-btn').addEventListener('click', finish);
+    $('restart').addEventListener('click', restart);
+    $('download-pdf').addEventListener('click', downloadPdf);
 
     // subtle particles on first load
     createParticles();
   });
-
-  // Global alias for inline onclick (if used)
-  window.startTest = start;
 })();
