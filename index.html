@@ -19,6 +19,7 @@
         <p class="subtitle">Опитувальник для керівництва (самооцінка)</p>
       </header>
 
+      
       <div class="instruction">
         <h3>Інструкція</h3>
         <p>
@@ -31,17 +32,17 @@
         </ul>
       </div>
 
-      <div class="form-grid">
+      <div class="form-grid one">
         <div class="form-group">
           <label for="organization">Назва організації</label>
           <input type="text" id="organization" placeholder="Назва вашої організації" autocomplete="organization" />
         </div>
-
-        <div class="form-group">
-          <label for="email">Email для отримання результатів</label>
-          <input type="email" id="email" placeholder="your@email.com" autocomplete="email" />
-        </div>
-      </div>
+      
+<div class="form-group">
+  <label for="email">Електронну пошту для отримання результатів:</label>
+  <input type="email" id="email" placeholder="your@email.com">
+</div>
+</div>
 
       <button class="btn" id="start-btn" type="button">Почати тест</button>
     </section>
@@ -90,6 +91,7 @@
             </div>
           </div>
         </div>
+
 <table class="results-table" aria-label="Таблиця результатів">
         <thead>
           <tr>
@@ -100,10 +102,11 @@
             <th>Рівень</th>
           </tr>
         </thead>
-        <tbody id="results-tbody"></tbody>
-      </table>
+	      <tbody id="results-tbody"></tbody>
+	    </table>
+	  </div>
 
-      <div class="recommendations">
+	  <div class="recommendations">
         <h3>Рекомендації щодо удосконалення</h3>
         <p class="hint">Сформовано на основі ваших відповідей (обраних варіантів) та рівня по критерію.</p>
         <div id="recommendations-container"></div>

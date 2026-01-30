@@ -122,6 +122,9 @@ body::before{
   gap: 16px;
 }
 
+/* single input layout (used when email is removed) */
+.form-grid.one{ grid-template-columns: 1fr; }
+
 .form-group{ margin-bottom: 0; }
 label{
   display:block;
@@ -417,4 +420,35 @@ input:focus{
 }
 .results-grid{
   display:block !important;
+}
+
+/* Print (Save as PDF) */
+@media print{
+  body{ background:#fff !important; animation:none !important; }
+  body::before{ display:none !important; }
+  .floating-particles{ display:none !important; }
+  .container{ box-shadow:none !important; border:none !important; margin:0 !important; max-width:none !important; }
+  #start-page, #test-page{ display:none !important; }
+  #results-page{ display:block !important; }
+  .btn, .actions{ display:none !important; }
+  .results-header{ box-shadow:none !important; }
+}
+
+
+.results-actions{
+  margin: 16px 0 18px;
+  display:flex;
+  gap:12px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.btn.btn-secondary{
+  background: rgba(255,255,255,0.85);
+  color:#111827;
+  border: 2px solid rgba(99,102,241,0.25);
+  text-transform:none;
+  letter-spacing:0.02em;
+}
+.btn.btn-secondary:hover{
+  transform: translateY(-2px);
 }
