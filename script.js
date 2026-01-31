@@ -7,7 +7,11 @@
   // ---------- State ----------
   let currentQuestionIndex = 0;
   let organizationName = '';
+
   let userEmail = '';
+
+  // How many recommendations to show per criterion
+  const RECS_PER_CRITERION = 10;
 
   // Answer storage
   const answers = [];            // numeric values per question index
@@ -182,7 +186,7 @@
       const uniqueRecs = [];
       for (const item of actionable) {
         if (!uniqueRecs.some(r => r.rec === item.rec)) uniqueRecs.push(item);
-        if (uniqueRecs.length >= 10) break;
+        if (uniqueRecs.length >= RECS_PER_CRITERION) break;
       }
 
       const generalHint =
@@ -301,6 +305,21 @@
     const { totalScore, totalMax, byCriterion } = calculate();
 
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    // --- Embed Unicode font to avoid "шифровка" (gibberish) for Cyrillic/UA text ---
+    const fonts = window.PDF_FONTS || {};
+    try {
+      if (fonts.dejavuSans) {
+        doc.addFileToVFS('DejaVuSans.ttf', fonts.dejavuSans);
+        doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+      }
+      if (fonts.dejavuSansBold) {
+        doc.addFileToVFS('DejaVuSans-Bold.ttf', fonts.dejavuSansBold);
+        doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+      }
+    } catch (e) {
+      // If fonts fail to load, PDF will fall back to default font.
+    }
+
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 40;
@@ -311,12 +330,12 @@
     const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 
     // Header
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('DejaVuSans', 'bold');
     doc.setFontSize(16);
     const title = 'Результати тестування';
     doc.text(title, pageW / 2, 55, { align: 'center' });
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('DejaVuSans', 'normal');
     doc.setFontSize(11);
     const meta = `${organizationName} • ${userEmail}`;
     doc.text(doc.splitTextToSize(meta, contentW), margin, 80);
@@ -325,12 +344,12 @@
 
     // Summary
     let y = 120;
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('DejaVuSans', 'bold');
     doc.setFontSize(12);
     doc.text('Загальний підсумок', margin, y);
     y += 12;
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('DejaVuSans', 'normal');
     doc.setFontSize(11);
     const pct = totalMax ? Math.round((totalScore / totalMax) * 100) : 0;
     doc.text(`Набрано балів: ${totalScore}`, margin, y + 18);
@@ -358,7 +377,7 @@
       body: tableBody,
       margin: { left: margin, right: margin },
       styles: {
-        font: 'helvetica',
+        font: 'DejaVuSans',
         fontSize: 9,
         cellPadding: 6,
         overflow: 'linebreak',
@@ -379,7 +398,7 @@
       didDrawPage: (data) => {
         // Clean footer (no URL)
         const pageNumber = doc.internal.getNumberOfPages();
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('DejaVuSans', 'normal');
         doc.setFontSize(9);
         doc.text(`Сторінка ${pageNumber}`, pageW - margin, pageH - 20, { align: 'right' });
       }
@@ -392,11 +411,11 @@
       doc.addPage();
       y = 55;
     }
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('DejaVuSans', 'bold');
     doc.setFontSize(12);
     doc.text('Рекомендації щодо удосконалення', margin, y);
     y += 14;
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('DejaVuSans', 'normal');
     doc.setFontSize(10);
     const hint = 'Сформовано на основі ваших відповідей (обраних варіантів) та рівня по критерію.';
     doc.text(doc.splitTextToSize(hint, contentW), margin, y);
@@ -420,7 +439,7 @@
       const uniqueRecs = [];
       for (const item of actionable) {
         if (!uniqueRecs.some(r => r.rec === item.rec)) uniqueRecs.push(item);
-        if (uniqueRecs.length >= 10) break;
+        if (uniqueRecs.length >= RECS_PER_CRITERION) break;
       }
 
       const generalHint =
@@ -451,12 +470,12 @@
         y = 55;
       }
 
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('DejaVuSans', 'bold');
       doc.setFontSize(11);
       doc.text(titleLines, margin, y);
       y += titleLines.length * 12;
 
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('DejaVuSans', 'normal');
       doc.setFontSize(10);
       doc.text(hintLines, margin, y);
       y += hintLines.length * 12;
@@ -465,10 +484,10 @@
       y += generalLines.length * 12 + 6;
 
       if (uniqueRecs.length) {
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('DejaVuSans', 'bold');
         doc.text('Пріоритетні кроки:', margin, y);
         y += 12;
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('DejaVuSans', 'normal');
         for (let i = 0; i < uniqueRecs.length; i++) {
           const x = uniqueRecs[i];
           const stepTitle = `${i + 1}) ${x.id ? `${x.id} • ` : ''}${x.qText}`;
@@ -497,8 +516,16 @@
       y += 14;
     }
 
-    const safeName = (organizationName || 'results').replace(/[\\/:*?"<>|]+/g, '_');
-    doc.save(`Результати_${safeName}.pdf`);
+    // TODO: fix error
+    const safeName = (organizationName || 'results')
+  .replace(/[\\/:*?"<>|]+/g, '_');
+
+    const safeEmail = (userEmail || 'email')
+      .replace(/[^a-zA-Z0-9@._-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    doc.save(`Results_${safeName}_${safeEmail}.pdf`);
   }
 
   // ---------- Wire up ----------
