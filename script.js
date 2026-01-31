@@ -182,7 +182,7 @@
       const uniqueRecs = [];
       for (const item of actionable) {
         if (!uniqueRecs.some(r => r.rec === item.rec)) uniqueRecs.push(item);
-        if (uniqueRecs.length >= 3) break;
+        if (uniqueRecs.length >= 10) break;
       }
 
       const generalHint =
@@ -420,7 +420,7 @@
       const uniqueRecs = [];
       for (const item of actionable) {
         if (!uniqueRecs.some(r => r.rec === item.rec)) uniqueRecs.push(item);
-        if (uniqueRecs.length >= 3) break;
+        if (uniqueRecs.length >= 10) break;
       }
 
       const generalHint =
